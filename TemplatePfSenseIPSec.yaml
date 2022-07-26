@@ -1,0 +1,341 @@
+zabbix_export:
+  version: '6.0'
+  date: '2022-07-26T14:31:49Z'
+  groups:
+    -
+      uuid: 7df96b18c230490a9a0a9e2307226338
+      name: Templates
+  templates:
+    -
+      uuid: 29a383264f3e4a2bae0c11d20ca48bbb
+      template: Template_pfSense_IPSec
+      name: Template_pfSense_IPSec
+      groups:
+        -
+          name: Templates
+      items:
+        -
+          uuid: ecebf5eab050498994445255f64f81a8
+          name: 'IPSEC GET'
+          key: pfsense.ipsec.get
+          delay: 1d
+          history: '0'
+          trends: '0'
+          value_type: TEXT
+      discovery_rules:
+        -
+          uuid: 3eb9632e1bdf4693bcf544a8c1395ba6
+          name: Phase1
+          type: DEPENDENT
+          key: pfsense.phase1
+          delay: '0'
+          filter:
+            evaltype: AND
+            conditions:
+              -
+                macro: '{#PHASE}'
+                value: '1'
+                formulaid: B
+              -
+                macro: '{#DISABLED}'
+                operator: NOT_EXISTS
+                formulaid: A
+          lifetime: 1w
+          item_prototypes:
+            -
+              uuid: f133a8e37b77484c914a7af82a9edcc2
+              name: '{#NAME} ({#IKEID}) P1 - Latência Ping'
+              type: SIMPLE
+              key: 'icmppingsec[{#RID},4]'
+              delay: 5m
+              history: 7d
+              value_type: FLOAT
+              units: s
+              valuemap:
+                name: 'Ping Status'
+              preprocessing:
+                -
+                  type: CHECK_NOT_SUPPORTED
+                  parameters:
+                    - ''
+              tags:
+                -
+                  tag: PING
+                -
+                  tag: VPN
+                  value: '{#NAME} ({#IKEID})'
+            -
+              uuid: b97f0f83926d4813bfe6a9abc131a76e
+              name: '{#NAME} ({#IKEID}) P1 - Ping'
+              type: SIMPLE
+              key: 'icmpping[{#RID},4]'
+              delay: 10m
+              history: 7d
+              valuemap:
+                name: 'Ping Status'
+              tags:
+                -
+                  tag: PING
+                -
+                  tag: VPN
+                  value: '{#NAME} ({#IKEID})'
+              trigger_prototypes:
+                -
+                  uuid: 88a348edc3f843b6a8080f80191af799
+                  expression: 'max(/Template_pfSense_IPSec/icmpping[{#RID},4],#3)=0'
+                  recovery_mode: RECOVERY_EXPRESSION
+                  recovery_expression: 'min(/Template_pfSense_IPSec/icmpping[{#RID},4],#3)=1'
+                  name: '{#NAME} ({#IKEID}) P1 - Ping: {ITEM.VALUE}'
+                  opdata: '{#RID}: {ITEM.LASTVALUE}'
+                  priority: HIGH
+                  manual_close: 'YES'
+                  tags:
+                    -
+                      tag: PING
+                    -
+                      tag: VPN
+                      value: '{#NAME} ({#IKEID})'
+            -
+              uuid: 033523ebcaca4d57ac28ed5741d3cca5
+              name: '{#NAME} ({#IKEID}) P1 - Status'
+              key: 'pfsense.ipsec.status[1,{#RID}]'
+              delay: 10m
+              history: 7d
+              valuemap:
+                name: 'Phase1 Status'
+              tags:
+                -
+                  tag: VPN
+                  value: '{#NAME} ({#IKEID})'
+              trigger_prototypes:
+                -
+                  uuid: b6ee8a3f112a4cf6b95b95073a601573
+                  expression: 'max(/Template_pfSense_IPSec/pfsense.ipsec.status[1,{#RID}],#3)=0'
+                  recovery_mode: RECOVERY_EXPRESSION
+                  recovery_expression: 'min(/Template_pfSense_IPSec/pfsense.ipsec.status[1,{#RID}],#3)=1'
+                  name: '{#NAME} ({#IKEID}) P1 - Status: {ITEM.VALUE}'
+                  opdata: '{#RID}: {ITEM.LASTVALUE}'
+                  priority: DISASTER
+                  manual_close: 'YES'
+                  tags:
+                    -
+                      tag: NAME
+                      value: '{#NAME} ({#IKEID})'
+                    -
+                      tag: PHASE
+                      value: '1'
+          graph_prototypes:
+            -
+              uuid: d6b3d4d6d2634d5e90f823e7302c367e
+              name: '{#NAME} ({#IKEID}) - P1 Ping: {#RID}'
+              graph_items:
+                -
+                  color: 81C784
+                  item:
+                    host: Template_pfSense_IPSec
+                    key: 'pfsense.ipsec.status[1,{#RID}]'
+            -
+              uuid: 408ef39f806547b5bded86b0c27a9c23
+              name: '{#NAME} ({#IKEID}) - P1 Status'
+              graph_items:
+                -
+                  drawtype: GRADIENT_LINE
+                  color: 81C784
+                  item:
+                    host: Template_pfSense_IPSec
+                    key: 'pfsense.ipsec.status[1,{#RID}]'
+            -
+              uuid: 3e975394a4774679a12698675164e2e1
+              name: '{#NAME} ({#IKEID}) P1 - Latência Ping: {#RID}'
+              graph_items:
+                -
+                  drawtype: GRADIENT_LINE
+                  color: 66BB6A
+                  item:
+                    host: Template_pfSense_IPSec
+                    key: 'icmppingsec[{#RID},4]'
+          master_item:
+            key: pfsense.ipsec.get
+          lld_macro_paths:
+            -
+              lld_macro: '{#PHASE}'
+              path: $.phase
+            -
+              lld_macro: '{#NAME}'
+              path: $.descr
+            -
+              lld_macro: '{#RID}'
+              path: $.rid
+            -
+              lld_macro: '{#LID}'
+              path: $.lid
+            -
+              lld_macro: '{#DISABLED}'
+              path: $.disabled
+            -
+              lld_macro: '{#INTERFACE}'
+              path: $.interface
+            -
+              lld_macro: '{#IKEID}'
+              path: $.ikeid
+        -
+          uuid: 68821e12b27b45d48f3c70d950a2496c
+          name: Phase2
+          type: DEPENDENT
+          key: pfsense.phase2
+          delay: '0'
+          filter:
+            evaltype: AND
+            conditions:
+              -
+                macro: '{#PHASE}'
+                value: '2'
+                formulaid: A
+          lifetime: 1w
+          item_prototypes:
+            -
+              uuid: 54baee8cc4994e5fa7c42be7e12ddfe9
+              name: '{#NAME} ({#IKEID}) P2 - {#CON} Status'
+              key: 'pfsense.ipsec.status[2,{#CON}]'
+              delay: 10m
+              history: 7d
+              valuemap:
+                name: 'Phase 2 Status'
+              tags:
+                -
+                  tag: TRAFFIC
+                -
+                  tag: VPN
+                  value: '{#NAME} ({#IKEID}) - {#CON}'
+              trigger_prototypes:
+                -
+                  uuid: 4cd4fbdaef7c406eab2f02aeb1c5136b
+                  expression: 'max(/Template_pfSense_IPSec/pfsense.ipsec.status[2,{#CON}],#3)=0'
+                  recovery_mode: RECOVERY_EXPRESSION
+                  recovery_expression: 'min(/Template_pfSense_IPSec/pfsense.ipsec.status[2,{#CON}],#2)=1'
+                  name: '{#NAME} ({#IKEID}) P2 - {#CON} Status: {ITEM.VALUE}'
+                  opdata: '{#LNET} => {#RNET}: {ITEM.LASTVALUE}'
+                  priority: DISASTER
+                  manual_close: 'YES'
+                  tags:
+                    -
+                      tag: PHASE
+                      value: '2'
+                    -
+                      tag: VPN
+                      value: '{#NAME} ({#IKEID}) - {#CON}'
+            -
+              uuid: e01739b19d1447abaaa9490b44d919cb
+              name: '{#NAME} ({#IKEID}) P2 - {#CON} Tráfego INPUT'
+              key: 'pfsense.ipsec.traffic[{#CON},in]'
+              delay: 5m
+              history: 7d
+              units: b
+              preprocessing:
+                -
+                  type: MULTIPLIER
+                  parameters:
+                    - '8'
+                -
+                  type: CHANGE_PER_SECOND
+                  parameters:
+                    - ''
+              tags:
+                -
+                  tag: TRAFFIC
+                -
+                  tag: VPN
+                  value: '{#NAME} ({#IKEID}) - {#CON}'
+            -
+              uuid: a4c04cee6aac47aea1d2ce910eacc328
+              name: '{#NAME} ({#IKEID}) P2 - {#CON} Tráfego OUTPUT'
+              key: 'pfsense.ipsec.traffic[{#CON},out]'
+              delay: 5m
+              history: 7d
+              units: b
+              preprocessing:
+                -
+                  type: MULTIPLIER
+                  parameters:
+                    - '8'
+                -
+                  type: CHANGE_PER_SECOND
+                  parameters:
+                    - ''
+              tags:
+                -
+                  tag: TRAFFIC
+                -
+                  tag: VPN
+                  value: '{#NAME} ({#IKEID}) - {#CON}'
+          graph_prototypes:
+            -
+              uuid: 1c8206d3284c4b8290f876a1ddae0ae7
+              name: '{#NAME} ({#IKEID}) P2 - {#CON} Tráfego'
+              graph_items:
+                -
+                  color: 43A047
+                  item:
+                    host: Template_pfSense_IPSec
+                    key: 'pfsense.ipsec.traffic[{#CON},in]'
+                -
+                  sortorder: '1'
+                  color: 0040FF
+                  item:
+                    host: Template_pfSense_IPSec
+                    key: 'pfsense.ipsec.traffic[{#CON},out]'
+          master_item:
+            key: pfsense.ipsec.get
+          lld_macro_paths:
+            -
+              lld_macro: '{#IKEID}'
+              path: $.ikeid
+            -
+              lld_macro: '{#NAME}'
+              path: $.descr
+            -
+              lld_macro: '{#PHASE}'
+              path: $.phase
+            -
+              lld_macro: '{#CON}'
+              path: $.con
+            -
+              lld_macro: '{#LNET}'
+              path: $.lnet
+            -
+              lld_macro: '{#RNET}'
+              path: $.rnet
+      valuemaps:
+        -
+          uuid: db2e2eb6cd684e39a39fcd94dd73616b
+          name: 'Phase1 Status'
+          mappings:
+            -
+              value: '1'
+              newvalue: ESTABLISHED
+            -
+              value: '2'
+              newvalue: CONNECTING
+            -
+              value: '0'
+              newvalue: DOWN
+        -
+          uuid: 55d0da1682ad4710906676820f49fab4
+          name: 'Phase 2 Status'
+          mappings:
+            -
+              value: '1'
+              newvalue: UP
+            -
+              value: '0'
+              newvalue: DOWN
+        -
+          uuid: 2b92499fa2c2499f9fec8b9b96c3673c
+          name: 'Ping Status'
+          mappings:
+            -
+              value: '1'
+              newvalue: UP
+            -
+              value: '0'
+              newvalue: DOWN
