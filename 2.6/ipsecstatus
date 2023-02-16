@@ -1,0 +1,49 @@
+#!/bin/sh
+
+statusPhase1 () {
+    STATUS=$(ipsec status "$1" | grep -E "$1\[[0-9]+\]:" | awk '{print $2}' | tail -1)
+    case $STATUS in
+        "ESTABLISHED")
+            echo -n 1
+            break
+            ;;
+        "CONNECTING")
+            echo -n 2
+            break
+            ;;
+        *)
+            echo -n 0
+            break
+            ;;
+    esac
+}
+
+statusPhase2 () {
+    STATUS=$(ipsec status "$1" | grep "INSTALLED" | tail -1)
+    if [ -z "$STATUS" ] ; then 
+        echo -n 0
+    else
+        echo -n 1
+    fi
+}
+
+
+
+tuneltest () {
+    case "$1" in
+        1)
+            statusPhase1 "$2"
+            break
+            ;;
+        2)
+            statusPhase2 "$2"
+            break
+            ;;
+        *)
+            echo "error"
+            break
+            ;;
+    esac
+}
+
+tuneltest "$1" "$2"

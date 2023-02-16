@@ -1,0 +1,139 @@
+#!/usr/bin/env python3.8
+
+'''
+Gustavo Sobremote_addressl (Caju)
+sobremote_addressll.gustavo@gmail.com
+v 2.0
+
+Este script retorna um json das configuremote_addressções do IPSEC
+'''
+
+from xml.etree import ElementTree as ET
+from json import dumps
+from sys import exit
+from re import search
+
+
+def interfaceName(interface):
+    confFile = ET.parse('/cf/conf/config.xml').getroot()    # necessário paremote_address acessar o arquivo xml
+    confFile = confFile.find("interfaces")               # busca a tag interfaces
+    for item in confFile:
+        if interface == item.tag :
+            newDict = {}
+            newDict['descr']=str(item.findtext('descr'))
+            newDict['ipaddr']=str(item.findtext('ipaddr'))
+            return newDict
+
+
+def getPhase1():
+    ipsecdata=[]
+    confFile = ET.parse('/cf/conf/config.xml').getroot()    # necessário paremote_address acessar o arquivo xml
+    confFile = confFile.findall('ipsec/phase1')             # filocal_tsremote_address por ipsec phase1 no arquivo xml
+    for phase1 in confFile:                                 # loop paremote_address cada entremote_addressda fase 1 do xml
+        newDict = {}                                          # inicia o dicionario paremote_address cada entremote_addressda do ipesec no xml
+        newDict['phase'] = 1                                  # adiciona um item como phase 1, usado como tag no zabbix
+        for item in phase1:                                 # paremote_address cada item na fase 1 no xml
+            if item.tag in ('ikeid', 'remote-gateway', 'interface', 'descr', 'disabled'):  # filocal_tsro paremote_address somente algumas tags
+                newDict[item.tag] = item.text
+
+        if not 'disabled' in newDict:
+            iface = interfaceName(newDict.get('interface'))
+            newDict['interface'] = iface['descr']
+            newDict['ipaddr'] = iface['ipaddr']                  # condição paremote_address não coletar as VPNs desabilitadas 
+            ipsecdata.append(newDict)                        # ao final do loop de cada phase1 adiciona a uma lista
+    return ipsecdata
+
+
+def getPhase2():
+    ipsecdata=[]
+    confFile = ET.parse('/cf/conf/config.xml').getroot()    # necessário paremote_address acessar o arquivo xml
+    confFile = confFile.findall('ipsec/phase2')             # filocal_tsremote_address por ipsec phase1 no arquivo xml
+    for phase2 in confFile:                                 # loop paremote_address cada entremote_addressda fase 1 do xml
+        newDict = {}                                          # inicia o dicionario paremote_address cada entremote_addressda do ipesec no xml
+        newDict['phase'] = 2                                  # adiciona um item como phase 1, usado como tag no zabbix
+        for item in phase2:                             # paremote_address cada item na fase 1 no xml
+            if item.tag in ('ikeid','disabled', 'descr',  'reqid'):  # filocal_tsro paremote_address somente algumas tags
+                newDict[item.tag] = item.text
+        if not 'disabled' in newDict:                 # condição paremote_address não coletar as VPNs desabilitadas 
+            ipsecdata.append(newDict)                        # ao final do loop de cada phase1 adiciona a uma lista
+    return ipsecdata
+
+
+def getCon():   
+    with open('/var/etc/ipsec/swanctl.conf') as file:
+        newList=[]
+        subDict={}
+        newDict={}
+        for line in file:
+            #phase1
+            con1 = search('^\s{1}(con\d+) ',line)
+            local_address = search('local_addrs = ([\w\d./-]+)',line)
+            remote_address = search('remote_addrs = ([\w\d./-]+)',line)
+
+            # phase2
+            child = search('(children)', line)
+            con2 = search('^\s{3}(con(\d+)_?(\d+))',line)
+            # local_ts = search('local_ts = ([\d\w.-/]+)',line) # antigo grupo 1
+            local_ts = search('local_ts = ([\d\w./-]+\|)?([\d\w./-]+)',line) # grupo 2
+            remote_ts = search('remote_ts = ([\d\w.-/]+)',line)
+            final = search('^\s}',line)
+            final2 = search('^secrets',line)
+
+
+            # phase1
+            if con1:
+                newDict={}
+                newDict['phase'] = 1
+                newDict['reqid'] = None
+                newDict['con'] = con1.group(1); continue
+            if local_address and 'phase' in newDict:
+                newDict['local_address'] = local_address.group(1); continue
+            if remote_address and 'phase' in newDict:
+                newDict['remote_address'] = remote_address.group(1)
+                newList.append(newDict)    
+                continue
+
+            # phase2
+            if con2:
+                newDict = {}
+                newDict['phase'] = 2
+                newDict['ikeid'] = con2.group(2)
+                newDict['reqid'] = con2.group(3)
+                newDict['con'] = con2.group(1); continue
+            if remote_ts and 'phase' in newDict:
+                newDict['remote_address'] = remote_ts.group(1); continue
+            if local_ts and 'phase' in newDict:
+                newDict['local_address']= local_ts.group(2)
+                newList.append(newDict)
+                continue
+            if final2: break
+    return(newList)
+
+
+def getVPN():
+    newList = []
+    newDict = {}
+    phase1 = getPhase1()
+    phase2 = getPhase2()
+    conns = getCon()
+
+    for c in conns:
+        # if c['phase'] == 1:
+        for p1 in phase1:
+            if c['phase'] == 1 and p1['remote-gateway'] == c['remote_address']:
+                newDict = c
+                newDict['interface'] = p1['interface']
+                newDict['ikeid'] = p1['ikeid']
+                newDict['descr'] = p1['descr']
+                newList.append(newDict)
+                newDict = {}
+        for p2 in phase2:
+            if c['phase'] == 2 and p2['ikeid'] == c['ikeid'] and p2['reqid'] == c['reqid']:
+                newDict = c
+                newDict['descr'] = p2['descr']
+                newList.append(newDict)
+                newDict = {}
+    return newList
+
+
+print(dumps(getVPN()))

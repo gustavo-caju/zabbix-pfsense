@@ -1,0 +1,27 @@
+#!/bin/sh
+
+tunnelTraffic () {
+    CON=$(ipsec statusall "$1" | grep bytes)
+    if [ $? -eq 0 ] ; then
+        case "$2" in
+            in)
+                IN=$(printf "$CON" | awk '{print $3}' | tail -1)
+                printf "$IN"
+                break
+                ;;
+            out)
+                OUT=$(printf "$CON" | awk '{print $9}'| tail -1)
+                printf "$OUT"
+                break
+                ;;
+            *)
+               printf "error"
+		break;;
+	esac
+    else
+	printf 0 
+    fi 
+}
+
+
+tunnelTraffic $1 $2
