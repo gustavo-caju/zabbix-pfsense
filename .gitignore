@@ -1,0 +1,10 @@
+*.swp
+*~
+testes/
+config.xml
+venv/
+.venv/
+dist/
+build/
+main.spec
+swanctl.conf

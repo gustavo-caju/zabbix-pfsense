@@ -1,3 +1,4 @@
 *.swp
 *~
 testes/
+../config.xml
